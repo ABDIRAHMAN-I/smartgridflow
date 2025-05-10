@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-postgres-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-postgres-consumer
+  template:
+    metadata:
+      labels:
+        app: kafka-postgres-consumer
+    spec:
+      containers:
+        - name: consumer
+          image: smartgridflow-consumer:latest
+          imagePullPolicy: IfNotPresent

@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smart-meter-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: smart-meter-producer
+  template:
+    metadata:
+      labels:
+        app: smart-meter-producer
+    spec:
+      containers:
+        - name: producer
+          image: smartgridflow-producer:latest
+          imagePullPolicy: IfNotPresent
