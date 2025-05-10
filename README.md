@@ -1,12 +1,13 @@
+
 # ⚡ SmartGridFlow: A Cloud-Native Real-Time Smart-Meter Data Pipeline
 
-**SmartGridFlow** is a cloud-native, real-time data pipeline that simulates and processes energy-usage data from smart meters — mirroring production-grade systems used by energy and infrastructure providers. It showcases real-time streaming with **Kafka**, Python-based processing, and persistent storage in **PostgreSQL**, all orchestrated via **Kubernetes** and **Terraform**.
+**SmartGridFlow** is a cloud-native, real-time data pipeline that simulates and processes energy-usage data from smart meters — mirroring production-grade systems used by energy and infrastructure providers. It showcases real-time streaming with **Kafka**, Python-based processing, and persistent storage in **PostgreSQL**, all orchestrated via **Kubernetes** and **Terraform**, with GitOps managed through **ArgoCD**.
 
 ---
 
 ## 📐 Architecture Diagram
 
-```text
+```
 [ Smart Meter Simulator Pod ]
             |
  Kafka Topic: smart-meter-data
@@ -26,115 +27,166 @@
 - **Docker** – Containerisation of all services  
 - **Kubernetes (Kind)** – Local Kubernetes cluster for development  
 - **Terraform** – Infrastructure-as-Code (deployed via Helm)  
-- **Helm** – Simplified deployment of Kafka and PostgreSQL  
+- **Helm** – Simplified deployment of Kafka, PostgreSQL, and ArgoCD  
+- **ArgoCD** – GitOps controller for automatic deployment syncing  
 - **Makefile** – End-to-end automation of the pipeline  
+- **GitHub Actions** – CI/CD with integrated security scans
 
 ---
 
 ## 📁 Folder Structure
 
-```text
+```
 smartgridflow/
-├── simulator/        # Smart-meter producer app
-├── consumer/         # Kafka consumer app
-├── terraform/        # Infrastructure provisioning (Kafka, Postgres)
-├── k8s/              # Kubernetes deployment YAMLs
+├── simulator/          # Smart-meter producer app
+├── consumer/           # Kafka consumer app
+├── terraform/          # Infrastructure provisioning (Kafka, Postgres, ArgoCD)
+├── k8s/                # Kubernetes manifests
 │   ├── producer/
-│   └── consumer/
-├── kind-config.yaml  # Kind cluster configuration
-├── Makefile          # Automation commands
-└── README.md         # Project documentation
+│   ├── consumer/
+│   └── argocd/         # ArgoCD Application YAML
+├── helm_values/        # Custom Helm values files
+├── kind-config.yaml    # Kind cluster configuration
+├── Makefile            # Automation commands
+└── README.md           # Project documentation
 ```
 
 ---
 
 ## ⚙️ How It Works
 
-1. **Simulator** (Python) generates synthetic smart-meter readings and publishes them to the Kafka topic `smart-meter-data` every few seconds.  
-2. **Kafka** receives and buffers these messages on the `smart-meter-data` topic.  
-3. **Consumer** (Python) subscribes to the topic, processes incoming messages, and writes the results to **PostgreSQL**.  
-4. **PostgreSQL** stores the data for downstream analysis and visualisation.  
-5. All components run as pods in a **Kubernetes (Kind)** cluster, provisioned by **Terraform** and deployed via **Helm**.  
+1. **Simulator** generates synthetic smart-meter readings and publishes them to the Kafka topic `smart-meter-data`.  
+2. **Kafka** buffers these messages in real time.  
+3. **Consumer** subscribes to the topic and stores the messages in **PostgreSQL**.  
+4. **PostgreSQL** stores this data for downstream analytics or visualisation.  
+5. All services are containerised and deployed in **Kubernetes**, provisioned by **Terraform** and managed using **GitOps via ArgoCD**.  
 
 ---
 
-## 🧪 Getting Started
+## 🔧 Prerequisites
 
-### 🔧 Prerequisites
-
-Ensure the following are installed locally:
+Ensure the following tools are installed locally:
 
 - Docker  
 - Terraform  
 - Kind (Kubernetes-in-Docker)  
-- Python 3.10 +  
+- Python 3.10+  
 - Make  
+- kubectl  
 
 ---
 
-### 🚀 Run Everything
+## 🚀 Run Everything
 
 ```bash
 make all
 ```
 
-`make all` will:  
+This will:
 
-1. Provision the Kind cluster.  
-2. Deploy Kafka and PostgreSQL with Terraform + Helm.  
-3. Build Docker images for the simulator and consumer.  
-4. Load the images into the cluster.  
-5. Deploy the simulator and consumer apps.  
-6. Tail logs and verify that PostgreSQL is receiving data.  
-
----
-
-### 📦 Makefile Commands
-
-| Command         | Description                                                |
-|-----------------|------------------------------------------------------------|
-| `make all`      | Provision, build, deploy **and test** the entire pipeline  |
-| `make apply`    | Run Terraform to set up infrastructure                     |
-| `make build`    | Build Docker images and load them into the cluster         |
-| `make deploy`   | Deploy simulator and consumer apps to Kubernetes           |
-| `make test`     | Tail logs and confirm data is stored in PostgreSQL         |
-| `make destroy`  | Tear down infrastructure and delete the Kind cluster       |
+1. Provision the Kind cluster using Terraform  
+2. Deploy Kafka, PostgreSQL, and ArgoCD via Helm  
+3. Apply the ArgoCD Application which watches your GitHub repo  
+4. Perform a one-time deployment of the simulator and consumer apps  
+5. Run a full test to confirm data is flowing into PostgreSQL  
 
 ---
 
-### 🔍 Testing the Pipeline
+## 🧪 Makefile Commands
+
+| Command           | Description                                                           |
+|------------------|-----------------------------------------------------------------------|
+| `make all`       | Full end-to-end setup and test                                        |
+| `make apply`     | Run Terraform to provision infrastructure                             |
+| `make argocd`    | Display ArgoCD access link and password                               |
+| `make argocd-app`| Apply the ArgoCD application definition                               |
+| `make deploy`    | One-time apply of app manifests (bootstrap ArgoCD sync)               |
+| `make test`      | Stream logs and verify PostgreSQL ingestion                           |
+| `make destroy`   | Teardown: destroy infra and delete Kind cluster                       |
+
+---
+
+## 🔁 Continuous Integration & DevSecOps
+
+This project uses a **GitHub Actions pipeline** to build and secure Docker images for the simulator and consumer apps.
+
+### 🔧 CI/CD Pipeline Highlights
+
+| Stage                     | Tool/Action                                |
+|--------------------------|--------------------------------------------|
+| ✅ Code checkout          | `actions/checkout`                         |
+| 🔐 Secret scanning        | `Gitleaks`                                 |
+| 🛡️ Static analysis        | `Semgrep`                                  |
+| 📦 Dependency scan        | `Retire.js` for JavaScript libs            |
+| 🧪 Dockerfile linting     | `Hadolint`                                 |
+| 🏗️ Build & push images    | Docker build + push to Docker Hub         |
+| 🔍 Image vulnerability scan | `Trivy` (CRITICAL + HIGH severity only)   |
+
+> ✅ The pipeline is triggered manually (`workflow_dispatch`) and can be extended to run on pull requests or commits to `main`.
+
+---
+
+### 📦 Docker Hub Image Workflow
+
+- The producer and consumer Docker images are automatically built and pushed to Docker Hub.
+- These are then pulled by the Kubernetes deployment YAMLs during deployment or by ArgoCD during sync.
+
+---
+
+To trigger the pipeline:
+
+```bash
+gh workflow run docker-ci.yml
+```
+
+Or trigger it via the GitHub Actions UI.
+
+---
+
+## 📊 ArgoCD Access
+
+After running `make argocd`, you'll get:
+
+- ✅ ArgoCD login password
+- 🔗 Port-forwarding command to access ArgoCD UI
+- 💻 URL: `https://localhost:8080`
+- 📌 GitOps kicks in after initial deployment
+
+---
+
+## 🔍 Testing the Pipeline
 
 ```bash
 make test
 ```
 
-This will:  
+This command:
 
-- Stream logs from the simulator and consumer pods.  
-- Confirm that data is being ingested into PostgreSQL.  
-- Verify end-to-end pipeline functionality.  
+- Waits for services to be ready  
+- Streams logs from producer and consumer  
+- Queries PostgreSQL to confirm real-time ingestion  
 
 ---
 
-### 🧼 Cleaning Up
+## 🧼 Cleaning Up
 
 ```bash
 make destroy
 ```
 
-This command will:  
+Cleans your entire environment by:
 
-- Run `terraform destroy` to remove Kafka, PostgreSQL, and other resources.  
-- Delete the Kind cluster entirely, returning your system to a clean state.  
+- Destroying Terraform-managed infra  
+- Removing the local Kind cluster  
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License** — feel free to fork, adapt, and contribute.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you’d like to suggest improvements, raise issues, or add features (e.g. Prometheus metrics, Grafana dashboards, CI/CD workflows), please open an issue or submit a pull request.
-
----
-
-## 📄 Licence
-
-Distributed under the **MIT Licence** — feel free to use, modify, and adapt this project as needed.
+Contributions are welcome! Add new features like Prometheus/Grafana monitoring, external DNS, sealed secrets, or CI/CD integrations. Feel free to open issues or submit PRs.
