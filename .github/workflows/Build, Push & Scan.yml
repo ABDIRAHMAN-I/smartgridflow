@@ -1,4 +1,4 @@
-name: Build, Push & Scan Docker Images
+name: Build and Push Docker Images
 
 on:
   workflow_dispatch:
@@ -10,19 +10,18 @@ jobs:
     env:
       PRODUCER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/smartgridflow-producer
       CONSUMER_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/smartgridflow-consumer
-      SHORT_SHA: ${{ github.sha::7 }}  # First 7 characters of the commit SHA
 
     steps:
     - name: 🧾 Checkout code
       uses: actions/checkout@v3
 
-    # 🔍 Secret scanning
+    # 🔍 Step 1: Secret Scanning with Gitleaks
     - name: Secret Scan with Gitleaks
       uses: gitleaks/gitleaks-action@v2
       with:
         args: detect --source=. --verbose --redact
 
-    # 🛡️ Static Analysis
+    # 🛡️ Step 2: SAST with Semgrep
     - name: Run Semgrep for SAST
       uses: returntocorp/semgrep-action@v1
       with:
@@ -30,7 +29,7 @@ jobs:
         publishToken: ""
       continue-on-error: true
 
-    # 📦 Dependency vulnerability scanning
+    # 📦 Step 3: SCA with Retire.js
     - name: Install retire.js and Scan for Vulnerable Libraries
       run: |
         npm install -g retire
@@ -43,45 +42,44 @@ jobs:
         path: retire-report.json
         retention-days: 14
 
-    # 🔐 Docker Hub login
+    # 🔐 Step 4: Log in to Docker Hub
     - name: Log in to Docker Hub
       uses: docker/login-action@v2
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # 🧪 Dockerfile linting
+    # 🧪 Step 5: Lint Dockerfiles
     - name: Lint Producer Dockerfile
       run: docker run --rm -i hadolint/hadolint < ./producer/Dockerfile || true
 
     - name: Lint Consumer Dockerfile
       run: docker run --rm -i hadolint/hadolint < ./consumer/Dockerfile || true
 
-    # 🏗️ Build & push Producer image
+    # 🏗️ Step 6: Build and Push Producer Image
     - name: Build and Push Producer Image
       run: |
-        docker build -t ${{ env.PRODUCER_IMAGE }}:latest -t ${{ env.PRODUCER_IMAGE }}:${{ env.SHORT_SHA }} ./producer
+        docker build -t ${{ env.PRODUCER_IMAGE }}:latest ./producer
         docker push ${{ env.PRODUCER_IMAGE }}:latest
-        docker push ${{ env.PRODUCER_IMAGE }}:${{ env.SHORT_SHA }}
 
-    # 🏗️ Build & push Consumer image
+    # 🏗️ Step 7: Build and Push Consumer Image
     - name: Build and Push Consumer Image
       run: |
-        docker build -t ${{ env.CONSUMER_IMAGE }}:latest -t ${{ env.CONSUMER_IMAGE }}:${{ env.SHORT_SHA }} ./consumer
+        docker build -t ${{ env.CONSUMER_IMAGE }}:latest ./consumer
         docker push ${{ env.CONSUMER_IMAGE }}:latest
-        docker push ${{ env.CONSUMER_IMAGE }}:${{ env.SHORT_SHA }}
 
-    # 🔎 Image scanning with Trivy
+    # 🔎 Step 8: Scan Producer Image with Trivy
     - name: Scan Producer Image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.PRODUCER_IMAGE }}:${{ env.SHORT_SHA }}
+        image-ref: ${{ env.PRODUCER_IMAGE }}:latest
         format: 'table'
         severity: 'CRITICAL,HIGH'
 
+    # 🔎 Step 9: Scan Consumer Image with Trivy
     - name: Scan Consumer Image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.CONSUMER_IMAGE }}:${{ env.SHORT_SHA }}
+        image-ref: ${{ env.CONSUMER_IMAGE }}:latest
         format: 'table'
         severity: 'CRITICAL,HIGH'
