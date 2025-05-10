@@ -48,6 +48,7 @@ smartgridflow/
 ├── helm_values/        # Custom Helm values files
 ├── kind-config.yaml    # Kind cluster configuration
 ├── Makefile            # Automation commands
+├── screenshots/        # Visual evidence of the project running
 └── README.md           # Project documentation
 ```
 
@@ -126,20 +127,26 @@ This project uses a **GitHub Actions pipeline** to build and secure Docker image
 
 ---
 
-### 📦 Docker Hub Image Workflow
+## 📷 Visual Project Evidence
 
-- The producer and consumer Docker images are automatically built and pushed to Docker Hub.
-- These are then pulled by the Kubernetes deployment YAMLs during deployment or by ArgoCD during sync.
+### ✅ GitHub Actions CI/CD Pipeline
+
+![CI/CD GitHub Actions](./images/pipeline.png)  
+<sub>🔍 GitHub Actions running complete DevSecOps checks before pushing images to Docker Hub</sub>
 
 ---
 
-To trigger the pipeline:
+### 📊 ArgoCD GitOps Sync
 
-```bash
-gh workflow run docker-ci.yml
-```
+![ArgoCD Dashboard](./images/argocd.png)  
+<sub>🌍 ArgoCD confirms the sync status and app health, enabling true GitOps</sub>
 
-Or trigger it via the GitHub Actions UI.
+---
+
+### 📦 Full System Output Verification
+
+![Logs and Postgres Output](./images/posgresql.png)  
+<sub>🧪 Real-time logs from simulator and consumer; PostgreSQL confirms successful ingestion</sub>
 
 ---
 
