@@ -1,6 +1,6 @@
 # ⚡ SmartGridFlow: A Cloud-Native Real-Time Smart-Meter Data Pipeline
 
-**SmartGridFlow** is a cloud-native, real-time data pipeline that simulates and processes energy-usage data from smart meters — mirroring production-grade systems used by energy and infrastructure providers such as **Smart DCC**. It showcases real-time streaming with **Kafka**, Python-based processing, and persistent storage in **PostgreSQL**, all orchestrated via **Kubernetes** and **Terraform**.
+**SmartGridFlow** is a cloud-native, real-time data pipeline that simulates and processes energy-usage data from smart meters — mirroring production-grade systems used by energy and infrastructure providers. It showcases real-time streaming with **Kafka**, Python-based processing, and persistent storage in **PostgreSQL**, all orchestrated via **Kubernetes** and **Terraform**.
 
 ---
 
