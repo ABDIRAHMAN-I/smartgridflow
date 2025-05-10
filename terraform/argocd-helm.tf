@@ -4,8 +4,11 @@ resource "helm_release" "argocd" {
   chart      = "argo-cd"
   version    = "5.19.15"
 
-  namespace          = "argo-cd"
-  create_namespace   = true
-  timeout            = 600
+  namespace        = "argocd"
+  create_namespace = true
+  timeout          = 600
 
+  depends_on = [
+    null_resource.kind_cluster
+  ]
 }
