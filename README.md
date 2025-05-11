@@ -1,7 +1,7 @@
 
 # ⚡ SmartGridFlow: A Cloud-Native Real-Time Smart-Meter Data Pipeline
 
-**SmartGridFlow** is a cloud-native, real-time data pipeline that simulates and processes energy-usage data from smart meters — mirroring production-grade systems used by energy and infrastructure providers. It showcases real-time streaming with **Kafka**, Python-based processing, and persistent storage in **PostgreSQL**, all orchestrated via **Kubernetes** and **Terraform**, with GitOps managed through **ArgoCD**.
+**SmartGridFlow** is a production-inspired, cloud-native, real-time data pipeline that simulates and processes energy usage from smart meters. It leverages streaming with **Kafka**, processing in **Python**, secure storage in **PostgreSQL**, and a fully automated GitOps + DevSecOps pipeline using **Terraform**, **Helm**, **ArgoCD**, and **Vault**.
 
 ---
 
@@ -21,16 +21,17 @@
 
 ## 🚀 Tech Stack
 
-- **Python** – Simulator and consumer applications  
-- **Apache Kafka** – Real-time streaming platform  
-- **PostgreSQL** – Persistent storage for smart-meter readings  
-- **Docker** – Containerisation of all services  
-- **Kubernetes (Kind)** – Local Kubernetes cluster for development  
-- **Terraform** – Infrastructure-as-Code (deployed via Helm)  
-- **Helm** – Simplified deployment of Kafka, PostgreSQL, and ArgoCD  
-- **ArgoCD** – GitOps controller for automatic deployment syncing  
-- **Makefile** – End-to-end automation of the pipeline  
-- **GitHub Actions** – CI/CD with integrated security scans
+- **Python** – Producer & Consumer microservices  
+- **Apache Kafka** – Real-time message broker  
+- **PostgreSQL** – Structured data storage  
+- **Docker** – Containerisation  
+- **Kubernetes (Kind)** – Local cluster for development/testing  
+- **Terraform** – Infrastructure provisioning  
+- **Helm** – Chart-based deployment  
+- **ArgoCD** – GitOps controller for declarative K8s syncing  
+- **HashiCorp Vault** – Secure secrets management  
+- **GitHub Actions** – CI/CD with DevSecOps integrations  
+- **Makefile** – Automation of all steps  
 
 ---
 
@@ -40,40 +41,69 @@
 smartgridflow/
 ├── simulator/          # Smart-meter producer app
 ├── consumer/           # Kafka consumer app
-├── terraform/          # Infrastructure provisioning (Kafka, Postgres, ArgoCD)
-├── k8s/                # Kubernetes manifests
-│   ├── producer/
-│   ├── consumer/
-│   └── argocd/         # ArgoCD Application YAML
-├── helm_values/        # Custom Helm values files
-├── kind-config.yaml    # Kind cluster configuration
-├── Makefile            # Automation commands
-├── screenshots/        # Visual evidence of the project running
-└── README.md           # Project documentation
+├── terraform/          # Terraform configs (infra, ArgoCD, Vault)
+├── k8s/                # Kubernetes manifests (producer, consumer, ArgoCD app)
+├── helm_values/        # Custom Helm values
+├── Makefile            # All-in-one project automation
+├── kind-config.yaml    # Kind cluster config
+├── images/             # Visual evidence/screenshots
+└── README.md           # This file
 ```
 
 ---
 
 ## ⚙️ How It Works
 
-1. **Simulator** generates synthetic smart-meter readings and publishes them to the Kafka topic `smart-meter-data`.  
-2. **Kafka** buffers these messages in real time.  
-3. **Consumer** subscribes to the topic and stores the messages in **PostgreSQL**.  
-4. **PostgreSQL** stores this data for downstream analytics or visualisation.  
-5. All services are containerised and deployed in **Kubernetes**, provisioned by **Terraform** and managed using **GitOps via ArgoCD**.  
+1. **Simulator** generates real-time smart-meter readings and pushes them to a Kafka topic.
+2. **Kafka** buffers and streams data to subscribed consumers.
+3. **Consumer** reads from Kafka and writes to PostgreSQL.
+4. **PostgreSQL** holds data for analytics or reporting.
+5. **Vault** securely stores PostgreSQL credentials, avoiding hardcoding.
+6. **ArgoCD** monitors the repo and auto-applies any Kubernetes changes (GitOps).
+7. **Makefile** wraps all deployment/testing/teardown commands.
+
+---
+
+## 🔐 Secrets Management with Vault
+
+To avoid storing passwords in YAML or code, we use **HashiCorp Vault** (via Helm + Terraform).
+
+### ✅ How it's set up:
+
+- Vault is deployed with Terraform using Helm in dev mode
+- PostgreSQL creds (`smartuser`/`smartpass`) are stored in Vault at `secret/postgres`
+- Consumer app can retrieve these dynamically via Vault CLI or HTTP API
+
+### 📥 Store secret in Vault
+
+```bash
+vault kv put secret/postgres smartuser=smartuser smartpass=smartpass
+```
+
+### 📤 Retrieve secret in Vault Pod
+
+```bash
+kubectl exec -it vault-0 -n vault -- /bin/sh
+export VAULT_ADDR='http://127.0.0.1:8200'
+vault kv get secret/postgres
+```
+
+🔒 This allows secure, dynamic credential management in a cloud-native environment.
 
 ---
 
 ## 🔧 Prerequisites
 
-Ensure the following tools are installed locally:
+Install locally:
 
 - Docker  
 - Terraform  
-- Kind (Kubernetes-in-Docker)  
+- Kind  
 - Python 3.10+  
-- Make  
 - kubectl  
+- Helm  
+- Vault CLI  
+- Make
 
 ---
 
@@ -83,13 +113,10 @@ Ensure the following tools are installed locally:
 make all
 ```
 
-This will:
-
-1. Provision the Kind cluster using Terraform  
-2. Deploy Kafka, PostgreSQL, and ArgoCD via Helm  
-3. Apply the ArgoCD Application which watches your GitHub repo  
-4. Perform a one-time deployment of the simulator and consumer apps  
-5. Run a full test to confirm data is flowing into PostgreSQL  
+1. Creates Kind cluster  
+2. Deploys Kafka, PostgreSQL, Vault, and ArgoCD via Terraform + Helm  
+3. Pushes simulator & consumer deployments  
+4. Verifies ingestion to PostgreSQL  
 
 ---
 
@@ -97,97 +124,93 @@ This will:
 
 | Command           | Description                                                           |
 |------------------|-----------------------------------------------------------------------|
-| `make all`       | Full end-to-end setup and test                                        |
-| `make apply`     | Run Terraform to provision infrastructure                             |
-| `make argocd`    | Display ArgoCD access link and password                               |
-| `make argocd-app`| Apply the ArgoCD application definition                               |
-| `make deploy`    | One-time apply of app manifests (bootstrap ArgoCD sync)               |
-| `make test`      | Stream logs and verify PostgreSQL ingestion                           |
-| `make destroy`   | Teardown: destroy infra and delete Kind cluster                       |
+| `make all`       | Full end-to-end deployment & test                                     |
+| `make apply`     | Terraform provisioning                                                |
+| `make deploy`    | Deploy apps manually to K8s                                            |
+| `make argocd`    | Shows ArgoCD password and port-forward info                           |
+| `make test`      | Verifies logs and database ingestion                                  |
+| `make destroy`   | Full teardown (Terraform + Kind)                                      |
 
 ---
 
-## 🔁 Continuous Integration & DevSecOps
+## 🔁 CI/CD & DevSecOps
 
-This project uses a **GitHub Actions pipeline** to build and secure Docker images for the simulator and consumer apps.
+### ✅ GitHub Actions Pipeline Includes:
 
-### 🔧 CI/CD Pipeline Highlights
+| Stage                       | Tool               |
+|----------------------------|--------------------|
+| Source Control             | GitHub             |
+| Secret Scanning            | Gitleaks           |
+| Static Code Analysis       | Semgrep            |
+| Dependency Scanning        | Retire.js          |
+| Dockerfile Linting         | Hadolint           |
+| Build & Push Docker Images | Docker             |
+| Vulnerability Scans        | Trivy              |
 
-| Stage                     | Tool/Action                                |
-|--------------------------|--------------------------------------------|
-| ✅ Code checkout          | `actions/checkout`                         |
-| 🔐 Secret scanning        | `Gitleaks`                                 |
-| 🛡️ Static analysis        | `Semgrep`                                  |
-| 📦 Dependency scan        | `Retire.js` for JavaScript libs            |
-| 🧪 Dockerfile linting     | `Hadolint`                                 |
-| 🏗️ Build & push images    | Docker build + push to Docker Hub         |
-| 🔍 Image vulnerability scan | `Trivy` (CRITICAL + HIGH severity only)   |
-
-> ✅ The pipeline is triggered manually (`workflow_dispatch`) and can be extended to run on pull requests or commits to `main`.
+📦 Docker images are pushed to Docker Hub and pulled by Kubernetes deployments.
 
 ---
 
-## 📷 Visual Project Evidence
+## 📷 Visual Proof
 
-
-### 📊 ArgoCD GitOps Sync
+### 🔄 ArgoCD GitOps Dashboard
 
 ![ArgoCD Dashboard](./images/argocd.png)  
-<sub>🌍 ArgoCD confirms the sync status and app health, enabling true GitOps</sub>
+<sub>🌀 Real-time syncing from GitHub → Kubernetes</sub>
 
 ---
 
-### 📦 Full System Output Verification
+### 🐘 PostgreSQL Data Verification
 
-![Logs and Postgres Output](./images/posgresql.png)  
-<sub>🧪 Real-time logs from simulator and consumer; PostgreSQL confirms successful ingestion</sub>
-
----
-
-## 📊 ArgoCD Access
-
-After running `make argocd`, you'll get:
-
-- ✅ ArgoCD login password
-- 🔗 Port-forwarding command to access ArgoCD UI
-- 💻 URL: `https://localhost:8080`
-- 📌 GitOps kicks in after initial deployment
+![PostgreSQL Logs](./images/posgresql.png)  
+<sub>🧪 Pipeline logs + successful database ingestion</sub>
 
 ---
 
-## 🔍 Testing the Pipeline
+## 🌍 ArgoCD Access
+
+```bash
+make argocd
+```
+
+- Shows ArgoCD password
+- Port-forwards web UI to `https://localhost:8080`
+- GitOps monitoring auto-kicks in after setup
+
+---
+
+## 🧪 Testing the Pipeline
 
 ```bash
 make test
 ```
 
-This command:
-
-- Waits for services to be ready  
-- Streams logs from producer and consumer  
-- Queries PostgreSQL to confirm real-time ingestion  
+- Tails pod logs  
+- Queries PostgreSQL for latest readings  
+- Validates end-to-end ingestion  
 
 ---
 
-## 🧼 Cleaning Up
+## 🧼 Tear Down
 
 ```bash
 make destroy
 ```
 
-Cleans your entire environment by:
-
-- Destroying Terraform-managed infra  
-- Removing the local Kind cluster  
+- Removes infrastructure (Terraform destroy)
+- Deletes local cluster (Kind delete)
 
 ---
 
 ## 📄 License
 
-Distributed under the **MIT License** — feel free to fork, adapt, and contribute.
+MIT – Free to use, adapt, and contribute.
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contributions Welcome
 
-Contributions are welcome! Add new features like Prometheus/Grafana monitoring, external DNS, sealed secrets, or CI/CD integrations. Feel free to open issues or submit PRs.
+Ideas? Bugs? Additions (Prometheus, metrics, dashboards)?  
+PRs and Issues are welcome.
+
+---
