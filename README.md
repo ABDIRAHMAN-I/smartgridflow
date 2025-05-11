@@ -129,12 +129,6 @@ This project uses a **GitHub Actions pipeline** to build and secure Docker image
 
 ## 📷 Visual Project Evidence
 
-### ✅ GitHub Actions CI/CD Pipeline
-
-![CI/CD GitHub Actions](./images/pipeline.png)  
-<sub>🔍 GitHub Actions running complete DevSecOps checks before pushing images to Docker Hub</sub>
-
----
 
 ### 📊 ArgoCD GitOps Sync
 
