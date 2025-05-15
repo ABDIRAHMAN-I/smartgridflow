@@ -1,3 +1,4 @@
+# simulates smart meter data coming in like a client then sends it to a kafka topic 
 import time
 import json
 import random

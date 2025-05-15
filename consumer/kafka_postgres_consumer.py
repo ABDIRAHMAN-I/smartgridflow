@@ -1,3 +1,4 @@
+# Reads data from a kafka topic and inserts it into a postrgreSQL database
 import json
 import psycopg2
 from kafka import KafkaConsumer

@@ -15,13 +15,13 @@ jobs:
     - name: 🧾 Checkout code
       uses: actions/checkout@v3
 
-    # 🔍 Step 1: Secret Scanning with Gitleaks
+    # 🔍 Step 1: Secret Scanning with Gitleaks (checks your code for any hardcoded secrets, like API keys or passwords)
     - name: Secret Scan with Gitleaks
       uses: gitleaks/gitleaks-action@v2
       with:
         args: detect --source=. --verbose --redact
 
-    # 🛡️ Step 2: SAST with Semgrep
+    # 🛡️ Step 2: SAST with Semgrep (performs Static Application Security Testing (SAST) to find vulnerabilities in your code)
     - name: Run Semgrep for SAST
       uses: returntocorp/semgrep-action@v1
       with:
@@ -29,7 +29,7 @@ jobs:
         publishToken: ""
       continue-on-error: true
 
-    # 📦 Step 3: SCA with Retire.js
+    # 📦 Step 3: SCA with Retire.js checks your project’s dependencies for any known vulnerabilities
     - name: Install retire.js and Scan for Vulnerable Libraries
       run: |
         npm install -g retire
@@ -49,7 +49,7 @@ jobs:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    # 🧪 Step 5: Lint Dockerfiles
+    # 🧪 Step 5: Lint Dockerfiles checks your Dockerfiles for best practices and potential issues
     - name: Lint Producer Dockerfile
       run: docker run --rm -i hadolint/hadolint < ./producer/Dockerfile || true
 
