@@ -7,15 +7,7 @@
 
 ## 📐 Architecture Diagram
 
-```
-[ Smart Meter Simulator Pod ]
-            |
- Kafka Topic: smart-meter-data
-            |
-   [ Kafka Consumer Pod ]
-            |
-     PostgreSQL Database
-```
+![Architecture Diagram](./images/Architectural-diagram.png)  
 
 ---
 
